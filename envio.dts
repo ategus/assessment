@@ -1,0 +1,131 @@
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/am33xx.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+/ {
+     /*
+      * Helper to show loaded overlays under:
+        /proc/device-tree/chosen/overlays/
+      */
+     compatible = "ti,am335x-bone", "ti,am33xx";
+
+     fragment@0 {
+         target-path="/";
+         __overlay__ {
+
+         chosen {
+
+	 overlays {
+
+	 ENVIO-ASSESSMENT_DTS = __TIMESTAMP__;
+
+         };
+         };
+	 };
+	 };
+
+	/* 
+	 *  Free up the used pins used by the cape from the pinmux helpers.
+	*/
+
+	fragment@1 {
+	    target = <&ocp>;
+	    __overlay__ {          
+      
+	    P8_14_pinmux { status = "disabled"; }; /* P8_14 ; GPIO0_26 ; ENVIOETH_RESET */
+	    P9_25_pinmux { status = "disabled"; }; /* P9_25 ; GPIO3_21 ; ENVIOETH_INT */
+            P9_31_pinmux { status = "disabled"; }; /* P9_31 ; SPI1_SCLK */
+	    P9_29_pinmux { status = "disabled"; }; /* P9_29 ; SPI1_MISO (D0) */
+	    P9_30_pinmux { status = "disabled"; }; /* P9_30 ; SPI1_MOSI (D1) */
+	    P9_28_pinmux { status = "disabled"; }; /* P9_28 ; SPI1_CS0 */
+	    P9_42_pinmux { status = "disabled"; }; /* P9_42 ; SPI1_CS1 */
+	    P9_92_pinmux { status = "disabled"; }; /* P9_92 ; Mcasp0_aclkr P9_42 */
+	    P8_18_pinmux { status = "disabled"; }; /* P8_18 ; GPIO2_1 ; ENVIOTPM_RESET */
+	    P9_19_pinmux { status = "disabled"; }; /* I2C2_SCL*/
+	    P9_20_pinmux { status = "disabled"; }; /* I2C2_SDA */
+	    };
+	};
+
+	fragment@2 {
+	    target = <&am33xx_pinmux>;
+	    __overlay__ {
+
+	    envioeth_pins: pinmux_envioeth_pins { 
+	    pinctrl-single,pins = 
+	    <AM33XX_IOPAD(0x09ac, PIN_INPUT | MUX_MODE7 ) /* P9_25 ; GPIO3_21 ; ENVIOETH_INT */
+	     AM33XX_IOPAD(0x0828, PIN_INPUT | MUX_MODE7 ) /* P8_14 ; GPIO0_26 ; ENVIOETH_RESET */
+	    >;
+	    };
+	    enviotpm_pins: pinmux_enviotpm_pins {
+	    pinctrl-single,pins = 
+	    <AM33XX_IOPAD(0x088c, PIN_OUTPUT_PULLUP | MUX_MODE7 ) /* P8_18 ; GPIO2_1 ; ENVIOTPM_RESET */>;
+	    };
+	    pb_spi1_pins: pinmux_pb_spi1_pins {
+	    pinctrl-single,pins = 
+	    <0x190 0x33 /* P9_31 ; SPI1_SCLK */
+	     0x194 0x33 /* P9_29 ; SPI1_MISO */
+	     0x198 0x13 /* P9_30 ; SPI1_MOSI */
+	     0x19c 0x13 /* P9_28 ; SPI1_CS0  */
+	     0x164 0x12 /* P9_42 ; SPI1_CS1  */
+	     0x1a0 0x30 /* P9_92 ; Mcasp0_aclkr P9_42 */
+	    >;
+	    };
+	    };
+	 }
+
+	fragment@3 {
+	    target = <&spi1>;
+	    __overlay__ {
+	    status = "okay";
+
+	    pinctrl-names = "default";
+	    pinctrl-0 = <&pb_spi1_pins>;
+            channel@0{ status = "disabled"; };
+	    channel@1{ status = "disabled"; };
+            };
+	};
+
+	fragment@4 {
+	    target = <&spi1>;
+	    __overlay__ {
+		
+	    envioeth: ethernet@0{
+		pinctrl-names = "default"
+		pinctrl-0 = <&envioeth_pins>;  
+		spi-max-frequency = <16000000>;
+		reg = <0>;
+		interrupt-parent = <&GPIO3>
+		interrupts = <21 IRQ_TYPE_EDGE_FALLING>;
+		local-mac-adress = [00 0b 15 0e 01 22]
+	    };
+	    enviotpm: tpm@0{
+		pinctrl-names = "default"
+		pinctrl-0 = <&enviotpm_pins>;  
+	 	spi-max-frequency = <32000000>;		
+		reg = <1>;
+		interrupt-parent = <&GPIO3>;
+		interrupts = <21 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&gpio2 1>;
+
+	    };
+	};
+
+
+	fragment@5 {
+	    target = <@i2c1>;
+	    __overlay__ {
+	      envioeeprom: eeprom@0{ 
+	      #adress-cells = <1>;
+	      #size-cells = <0>;
+	      reg = <0x50>	
+	    };
+	      enviortc: rtc@0{
+	      #adress-cells = <1>;
+	      #size-cells = <0>;
+	      reg = <0x68>	
+	    };
+	      enviotmpi2c: tmp@1{
+	      #adress-cells = <1>;
+	      #size-cells = <0>;
+	      reg = <0x29>	
+	    };
+};
